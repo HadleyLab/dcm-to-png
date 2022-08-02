@@ -7,6 +7,4 @@ RUN pip install -r requirements.txt
 
 COPY . .
 
-EXPOSE 8089
-
 CMD ["python3", "main.py"]
