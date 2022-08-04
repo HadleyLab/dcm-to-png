@@ -54,4 +54,4 @@ app = web.Application()
 app.add_routes([web.get("/", handle), web.get("/{patientId}", handle)])
 
 if __name__ == "__main__":
-    web.run_app(app, port=8089)
+    web.run_app(app, port=8080)
