@@ -1,6 +1,5 @@
 import os
 import io
-import tempfile
 
 import numpy as np
 import pydicom
@@ -33,41 +32,21 @@ def create_folder(path):
 
 
 async def handle(request):
-    patientId = request.match_info.get("patientId", "empty")
-    root_path = "../ipfs-nodejs/"
-    dicom_folder = "dicom-files"
-    png_folder = "png-files"
-    names = get_names(f"{root_path}{dicom_folder}")
-    create_folder(f"{root_path}{png_folder}")
-    create_folder(f"{root_path}/{png_folder}/{patientId}")
-    for name in names:
-        image = convert_dcm_to_png(f"{root_path}{dicom_folder}/{name}")
-        image.save(f"{root_path}{png_folder}/{patientId}/{name}.png")
-        print(f"{root_path}{png_folder}/{patientId}/{name}.png saved")
-    for name in names:
-        print("start remove")
-        os.remove(f"{root_path}{dicom_folder}/{name}")
-        print(f"{root_path}{dicom_folder}/{name} removed")
-    print("ok")
-    return web.Response(text="ok")
-
-async def handle_png(request):
-    img = Img.open("1.png")
-
+    fileName = request.query.get("fileName")
+    root_path = "/ipfs-nodejs/dicom-files"
+    image = convert_dcm_to_png(f"{root_path}/{fileName}")
     with io.BytesIO() as output:
-        img.save(output, format="PNG")
+        image.save(output, format="PNG")
         contents = output.getvalue()
-
     resp = web.StreamResponse(status=200)
-    resp.headers['Content-Type'] = 'image/png'
+    resp.headers["Content-Type"] = "image/png"
     await resp.prepare(request)
     await resp.write(contents)
     return resp
 
+
 app = web.Application()
-app.add_routes([web.get("/", handle),
-                web.get("/1.png", handle_png),
-                web.get("/{patientId}", handle)])
+app.add_routes([web.get("/", handle), web.get("/{fileName}", handle)])
 
 if __name__ == "__main__":
     web.run_app(app, port=8080)
