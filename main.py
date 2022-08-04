@@ -1,4 +1,6 @@
 import os
+import io
+import tempfile
 
 import numpy as np
 import pydicom
@@ -49,9 +51,23 @@ async def handle(request):
     print("ok")
     return web.Response(text="ok")
 
+async def handle_png(request):
+    img = Img.open("1.png")
+
+    with io.BytesIO() as output:
+        img.save(output, format="PNG")
+        contents = output.getvalue()
+
+    resp = web.StreamResponse(status=200)
+    resp.headers['Content-Type'] = 'image/png'
+    await resp.prepare(request)
+    await resp.write(contents)
+    return resp
 
 app = web.Application()
-app.add_routes([web.get("/", handle), web.get("/{patientId}", handle)])
+app.add_routes([web.get("/", handle),
+                web.get("/1.png", handle_png),
+                web.get("/{patientId}", handle)])
 
 if __name__ == "__main__":
     web.run_app(app, port=8080)
