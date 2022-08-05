@@ -1,10 +1,15 @@
-import os
 import io
+import logging
+import os
 
+import aiohttp
+import async_timeout
 import numpy as np
 import pydicom
 from aiohttp import web
 from PIL import Image as Img
+
+dicom_files_path = "./dicom-files"
 
 
 def get_names(path):
@@ -31,10 +36,30 @@ def create_folder(path):
         os.makedirs(path)
 
 
-async def handle(request):
-    fileName = request.query.get("fileName")
-    root_path = "/ipfs-nodejs/dicom-files"
-    image = convert_dcm_to_png(f"{root_path}/{fileName}")
+def clean_up(patient_id):
+    path = f"{dicom_files_path}/{patient_id}"
+    if os.path.exists(path):
+        os.system(f"rm -rf {path}")
+        logging.info(f"Removed {path}")
+    else:
+        logging.info(f"Folder {path} does not exist")
+
+
+async def download(patient_id, file_name, download_url):
+    create_folder(f"{dicom_files_path}/{patient_id}")
+    async with aiohttp.ClientSession() as session:
+        async with async_timeout.timeout(120):
+            async with session.get(download_url) as response:
+                with open(f"{dicom_files_path}/{patient_id}/{file_name}", "wb") as fd:
+                    async for data in response.content.iter_chunked(1024):
+                        fd.write(data)
+    return "Successfully downloaded " + file_name
+
+
+async def handle_convert_dcm(request):
+    file_name = request.query.get("fileName")
+    patient_id = request.query["patientId"]
+    image = convert_dcm_to_png(f"{dicom_files_path}/{patient_id}/{file_name}")
     with io.BytesIO() as output:
         image.save(output, format="PNG")
         contents = output.getvalue()
@@ -45,8 +70,26 @@ async def handle(request):
     return resp
 
 
+async def handle_download_dcm(request):
+    file_name = request.query["fileName"]
+    patient_id = request.query["patientId"]
+    download_url = str(request.url).split("downloadUrl=")[1]
+    await download(patient_id, file_name, download_url)
+    return web.Response(text="ok")
+
+
+async def handle_clean_up(request):
+    patient_id = request.query["patientId"]
+    clean_up(patient_id)
+    return web.Response(text="ok")
+
+
 app = web.Application()
-app.add_routes([web.get("/", handle), web.get("/{fileName}", handle)])
+app.add_routes([web.get("/download-dcm", handle_download_dcm)])
+app.add_routes([web.get("/clean-up", handle_clean_up)])
+app.add_routes(
+    [web.get("/", handle_convert_dcm), web.get("/{fileName}", handle_convert_dcm)]
+)
 
 if __name__ == "__main__":
     web.run_app(app, port=8080)
