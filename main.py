@@ -87,9 +87,7 @@ async def handle_clean_up(request):
 app = web.Application()
 app.add_routes([web.get("/download-dcm", handle_download_dcm)])
 app.add_routes([web.get("/clean-up", handle_clean_up)])
-app.add_routes(
-    [web.get("/", handle_convert_dcm), web.get("/{fileName}", handle_convert_dcm)]
-)
+app.add_routes([web.get("/get-png-image", handle_convert_dcm)])
 
 if __name__ == "__main__":
     web.run_app(app, port=8080)
