@@ -44,6 +44,7 @@ async def handle_base64(request):
     download_url = str(request.query["downloadUrl"])
     image = await download(download_url)
     with BytesIO() as output:
+        image.thumbnail((100, 100))
         image.save(output, format="PNG")
         contents = output.getvalue()
     resp = web.StreamResponse(status=200)
