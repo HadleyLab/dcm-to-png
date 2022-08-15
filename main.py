@@ -2,6 +2,7 @@ from io import BytesIO
 
 import aiohttp
 import async_timeout
+import base64
 import numpy as np
 import pydicom
 from aiohttp import web
@@ -39,8 +40,22 @@ async def handle(request):
     return resp
 
 
+async def handle_base64(request):
+    download_url = str(request.query["downloadUrl"])
+    image = await download(download_url)
+    with BytesIO() as output:
+        image.save(output, format="PNG")
+        contents = output.getvalue()
+    resp = web.StreamResponse(status=200)
+    resp.headers["Content-Type"] = "image/png"
+    await resp.prepare(request)
+    await resp.write(base64.b64encode(contents))
+    return resp
+
+
 app = web.Application()
 app.add_routes([web.get("/get-png-image", handle)])
+app.add_routes([web.get("/get-png-image-base64", handle_base64)])
 
 
 if __name__ == "__main__":
