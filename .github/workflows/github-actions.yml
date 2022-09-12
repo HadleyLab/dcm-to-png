@@ -21,4 +21,4 @@ jobs:
                   --platform linux/arm64,linux/amd64
                   --push
                   --tag ${{ env.BUILD_IMAGE }}
-                  --tag ${{ env.CACHE_IMAGE }} .
+                  .
